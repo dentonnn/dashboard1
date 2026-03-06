@@ -1,0 +1,912 @@
+<!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Master Timeline — Weeks 1–20</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── APP BAR ─────────────────────────────────────────── */
+.app-bar {
+  background: #0f172a;
+  color: #fff;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  z-index: 100;
+}
+.app-title {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.3px;
+}
+.app-sub { font-size: 11px; color: #64748b; font-weight: 400; }
+.zoom-grp { display: flex; align-items: center; gap: 4px; }
+.zbtn {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid #334155; background: #1e293b;
+  color: #94a3b8; cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; font-weight: 700; line-height: 1;
+}
+.zbtn:hover:not(:disabled) { background: #334155; color: #fff; }
+.zbtn:disabled { opacity: 0.3; cursor: default; }
+.zlbl { font-size: 12px; color: #94a3b8; width: 38px; text-align: center; font-weight: 600; }
+
+/* ── CONTROLS BAR ────────────────────────────────────── */
+.ctrl-bar {
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0; flex-wrap: wrap;
+}
+.ctrl-lbl { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+.ctrl-sep { width: 1px; height: 20px; background: #e2e8f0; margin: 0 4px; }
+.fbtn {
+  padding: 4px 11px; border-radius: 14px;
+  border: 1.5px solid #e2e8f0; background: transparent;
+  font-size: 11px; font-weight: 600; color: #64748b;
+  cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; gap: 4px;
+}
+.fbtn:hover { border-color: #cbd5e1; background: #f8fafc; }
+.fbtn.active { background: var(--c); color: #fff; border-color: transparent; }
+.fdot { width: 7px; height: 7px; border-radius: 50%; }
+.legend { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.li { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #64748b; white-space: nowrap; }
+
+/* ── TIMELINE WRAPPER ────────────────────────────────── */
+.tl-wrap { flex: 1; display: flex; min-height: 0; }
+
+.tl-left {
+  flex-shrink: 0; overflow-y: auto; background: #fff;
+  border-right: 2px solid #e2e8f0; z-index: 20;
+  scrollbar-width: none;
+}
+.tl-left::-webkit-scrollbar { display: none; }
+
+.tl-right { flex: 1; overflow: auto; min-width: 0; }
+.tl-right::-webkit-scrollbar { height: 8px; width: 6px; }
+.tl-right::-webkit-scrollbar-track { background: #f1f5f9; }
+.tl-right::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.tl-right::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+.tl-right::-webkit-scrollbar-corner { background: #f1f5f9; }
+
+/* ── LEFT PANEL ELEMENTS ─────────────────────────────── */
+.lp-corner {
+  background: #0f172a; border-bottom: 2px solid #1e293b;
+  display: flex; align-items: flex-end; padding: 8px 12px;
+  position: sticky; top: 0; z-index: 10;
+}
+.lp-corner-txt { font-size: 10px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.4px; }
+.lp-proj {
+  display: flex; align-items: center; gap: 7px; padding: 0 12px;
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.6px; color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.lp-row {
+  display: flex; align-items: center;
+  padding: 0 12px 0 16px; font-size: 11px; font-weight: 500;
+  color: #475569; background: #fff;
+  border-bottom: 1px solid #f1f5f9; border-left: 3px solid transparent;
+}
+.lp-cf {
+  display: flex; align-items: center; gap: 5px; padding: 0 10px;
+  font-size: 10px; font-weight: 700; color: #92400e;
+  background: #fffbeb; border-top: 1px solid #fde68a; border-bottom: 1px solid #fde68a;
+}
+
+/* ── RIGHT PANEL ELEMENTS ────────────────────────────── */
+.rp-hdr {
+  position: sticky; top: 0; z-index: 8;
+  display: flex; flex-direction: column; background: #1e293b;
+}
+.rp-phases { display: flex; height: 22px; border-bottom: 1px solid #334155; }
+.ph-cell {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.55);
+  text-transform: uppercase; letter-spacing: 0.4px;
+  border-right: 1px solid #334155; padding: 0 6px;
+  overflow: hidden; white-space: nowrap; flex-shrink: 0;
+}
+.rp-weeks { display: flex; height: 40px; border-bottom: 2px solid #334155; }
+.wk-col {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-right: 1px solid #334155; gap: 2px; flex-shrink: 0; cursor: default;
+}
+.wk-n { font-size: 12px; font-weight: 700; color: #cbd5e1; }
+.wk-l { font-size: 9px; color: #475569; }
+.wk-col.curr { background: rgba(239,68,68,0.12); }
+.wk-col.curr .wk-n { color: #ef4444; }
+
+.rp-proj-strip { flex-shrink: 0; }
+
+.rp-row {
+  position: relative; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; overflow: hidden;
+}
+.rp-row::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image: repeating-linear-gradient(
+    90deg, transparent 0px, transparent calc(var(--ww) - 1px),
+    #e2e8f0 calc(var(--ww) - 1px), #e2e8f0 var(--ww)
+  );
+}
+.rp-cf {
+  position: relative; background: #fffbeb;
+  border-top: 1px solid #fde68a; border-bottom: 1px solid #fde68a;
+  flex-shrink: 0; overflow: hidden;
+}
+
+/* Current week column */
+.cw-col {
+  position: absolute; top: 0; bottom: 0;
+  background: rgba(239,68,68,0.05); pointer-events: none; z-index: 1;
+}
+
+/* ── TASK BAR ────────────────────────────────────────── */
+.tbar {
+  position: absolute; border-radius: 5px;
+  display: flex; align-items: center; padding: 0 6px;
+  cursor: pointer; border: 1.5px solid;
+  overflow: hidden; z-index: 3; gap: 3px;
+  transition: filter 0.1s, box-shadow 0.1s, transform 0.1s;
+  user-select: none;
+}
+.tbar:hover {
+  filter: brightness(0.87);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+  z-index: 9; transform: translateY(-1px);
+}
+.tbar.is-imp { border-width: 2px; }
+.tbar.is-sub { opacity: 0.5; }
+.gate-bar {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: #ef4444; border-radius: 4px 0 0 4px; flex-shrink: 0;
+}
+.ti { font-size: 9px; flex-shrink: 0; }
+.tl-lbl { font-size: 10px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tc { font-size: 9px; flex-shrink: 0; }
+
+/* Conflict strip */
+.cf-strip {
+  position: absolute; top: 0; bottom: 0;
+  background: rgba(251,191,36,0.25);
+  border-left: 2px solid #f59e0b; border-right: 2px solid #f59e0b;
+  pointer-events: none;
+}
+.cf-note {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font-size: 10px; color: #92400e; font-weight: 500; white-space: nowrap;
+}
+
+/* ── STATS BAR ───────────────────────────────────────── */
+.stats-bar {
+  background: #fff; border-top: 1px solid #e2e8f0;
+  padding: 7px 16px; display: flex; gap: 14px;
+  flex-shrink: 0; font-size: 11px; align-items: center;
+}
+.si { display: flex; align-items: center; gap: 4px; color: #64748b; }
+.sv { font-weight: 700; font-size: 13px; color: #0f172a; }
+.hint { margin-left: auto; color: #94a3b8; font-size: 10px; }
+
+/* ── TOOLTIP ─────────────────────────────────────────── */
+.tooltip {
+  position: fixed; background: #0f172a; color: #fff;
+  padding: 10px 13px; border-radius: 9px; font-size: 12px;
+  max-width: 300px; z-index: 9999; pointer-events: none;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+  line-height: 1.5; opacity: 0; transition: opacity 0.08s;
+}
+.tooltip.show { opacity: 1; }
+.tt-h { font-weight: 700; font-size: 13px; margin-bottom: 4px; line-height: 1.3; }
+.tt-w { display: inline-block; background: #1e293b; border-radius: 4px; padding: 1px 7px; font-size: 10px; color: #7dd3fc; font-weight: 700; margin-bottom: 3px; }
+.tt-m { color: #94a3b8; font-size: 11px; margin-bottom: 2px; }
+.tt-d { color: #cbd5e1; font-size: 11px; margin-top: 6px; border-top: 1px solid #1e3a5f; padding-top: 6px; }
+.tt-gate { color: #fca5a5; font-size: 10px; font-weight: 700; margin-top: 4px; }
+.tt-cf { color: #fdba74; font-size: 10px; font-weight: 700; margin-top: 2px; }
+
+/* ── MODAL ───────────────────────────────────────────── */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 2000; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.18s;
+  backdrop-filter: blur(4px);
+}
+.modal-bg.show { opacity: 1; pointer-events: all; }
+.modal-card {
+  background: #fff; border-radius: 14px;
+  width: 480px; max-width: 92vw; max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.06);
+  transform: translateY(12px) scale(0.97); transition: transform 0.18s;
+}
+.modal-bg.show .modal-card { transform: translateY(0) scale(1); }
+.modal-top { height: 5px; border-radius: 14px 14px 0 0; }
+.modal-hdr {
+  padding: 18px 18px 0; display: flex;
+  justify-content: space-between; align-items: flex-start; gap: 8px;
+}
+.modal-ttl { font-size: 18px; font-weight: 800; color: #0f172a; line-height: 1.3; flex: 1; }
+.mclose {
+  width: 30px; height: 30px; border-radius: 8px; border: none;
+  background: #f1f5f9; cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  color: #64748b; flex-shrink: 0; transition: background 0.1s;
+}
+.mclose:hover { background: #e2e8f0; }
+.modal-body { padding: 14px 18px 22px; }
+.m-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 3px; }
+.b-proj { color: #fff; }
+.b-gate { background: #fee2e2; color: #b91c1c; }
+.b-ms { background: #fef3c7; color: #92400e; }
+.b-cf { background: #fff7ed; color: #c2410c; }
+.b-imp { background: #dc2626; color: #fff; }
+.m-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.wpill { background: #0f172a; color: #7dd3fc; padding: 3px 10px; border-radius: 7px; font-size: 11px; font-weight: 700; }
+.apill { display: flex; align-items: center; gap: 4px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px; padding: 3px 10px; font-size: 11px; color: #475569; }
+.m-desc {
+  font-size: 13px; line-height: 1.65; color: #334155;
+  background: #f8fafc; padding: 12px 14px;
+  border-radius: 9px; border-left: 4px solid; margin-bottom: 12px;
+}
+.m-warn {
+  display: flex; gap: 8px; padding: 10px 12px;
+  border-radius: 9px; border: 1px solid; font-size: 12px; line-height: 1.5; margin-top: 8px;
+}
+.w-gate { background: #fef2f2; border-color: #fecaca; color: #7f1d1d; }
+.w-cf { background: #fff7ed; border-color: #fed7aa; color: #7c2d12; }
+.m-section-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; margin-top: 14px; }
+
+/* Pulse animation for important tasks */
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(220,38,38,0); }
+}
+.tbar.is-imp { animation: pulse-border 2.5s infinite; }
+.tbar.is-imp:hover { animation: none; }
+</style>
+</head>
+<body>
+
+<!-- APP BAR -->
+<div class="app-bar">
+  <div class="app-title">
+    <span>📅</span>
+    Master Timeline
+    <span class="app-sub">— 20 Weeks · 4 Workstreams · Interactive</span>
+  </div>
+  <div class="zoom-grp">
+    <button class="zbtn" id="zOut" title="Zoom out">−</button>
+    <span class="zlbl" id="zlbl">100%</span>
+    <button class="zbtn" id="zIn" title="Zoom in">+</button>
+  </div>
+</div>
+
+<!-- CONTROLS BAR -->
+<div class="ctrl-bar">
+  <span class="ctrl-lbl">Filter:</span>
+  <button class="fbtn active" data-fid="all" style="--c:#0f172a">All Projects</button>
+  <button class="fbtn" data-fid="astron" style="--c:#7c3aed">
+    <span class="fdot" style="background:#7c3aed"></span>Astron Chain
+  </button>
+  <button class="fbtn" data-fid="autox" style="--c:#2563eb">
+    <span class="fdot" style="background:#2563eb"></span>AutoX
+  </button>
+  <button class="fbtn" data-fid="goldrwa" style="--c:#ca8a04">
+    <span class="fdot" style="background:#ca8a04"></span>Gold RWA
+  </button>
+  <button class="fbtn" data-fid="aienhancer" style="--c:#16a34a">
+    <span class="fdot" style="background:#16a34a"></span>AI Enhancer
+  </button>
+  <div class="ctrl-sep"></div>
+  <div class="legend">
+    <div class="li"><span style="color:#ef4444;font-size:13px">🔒</span> Gate (blocks downstream)</div>
+    <div class="li"><span style="color:#f59e0b;font-size:12px">◆</span> Milestone</div>
+    <div class="li"><span style="color:#f97316;font-size:12px">⚠️</span> Resource Conflict</div>
+    <div class="li" style="background:#fee2e2;padding:2px 8px;border-radius:8px;color:#991b1b;font-weight:700;font-size:10px">🚨 Critical Gate</div>
+  </div>
+</div>
+
+<!-- TIMELINE -->
+<div class="tl-wrap">
+  <div class="tl-left" id="tlLeft"></div>
+  <div class="tl-right" id="tlRight"></div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar" id="statsBar"></div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal-card">
+    <div class="modal-top" id="mTop"></div>
+    <div class="modal-hdr">
+      <div class="modal-ttl" id="mTitle"></div>
+      <button class="mclose" id="mClose">✕</button>
+    </div>
+    <div class="modal-body" id="mBody"></div>
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════
+
+const WWS = [65, 85, 110, 145, 185];
+let wIdx = 2;
+let WW = WWS[wIdx];
+
+const TW      = 20;   // total weeks
+const LW      = 225;  // left panel width
+const HDR_H   = 62;   // header height (phase 22 + weeks 40)
+const BAR_H   = 24;   // task bar height px
+const LANE_H  = 32;   // lane height (bar + gap)
+const ROW_PAD = 8;    // row top/bottom padding
+const PROJ_H  = 36;   // project header row height
+const CF_H    = 26;   // conflict row height
+const CUR_WK  = 1;    // current active week
+
+// ════════════════════════════════════════════════════════
+// PROJECT COLORS
+// ════════════════════════════════════════════════════════
+
+const PC = {
+  astron:     { bg:'#ede9fe', bd:'#c4b5fd', tx:'#4c1d95', hd:'#7c3aed', ic:'⛓️',  lt:'#faf5ff' },
+  autox:      { bg:'#dbeafe', bd:'#93c5fd', tx:'#1e3a8a', hd:'#2563eb', ic:'⚙️',  lt:'#eff6ff' },
+  goldrwa:    { bg:'#fef9c3', bd:'#fde047', tx:'#78350f', hd:'#ca8a04', ic:'🏅',  lt:'#fefce8' },
+  aienhancer: { bg:'#dcfce7', bd:'#86efac', tx:'#14532d', hd:'#16a34a', ic:'🤖',  lt:'#f0fdf4' },
+};
+
+// ════════════════════════════════════════════════════════
+// DATA
+// ════════════════════════════════════════════════════════
+
+const PHASES = [
+  { lbl:'Phase 1 — Foundation & Mobilization', w1:1,  w2:4,  bg:'#152240' },
+  { lbl:'Phase 2 — Activation & Decision',     w1:5,  w2:8,  bg:'#2a1657' },
+  { lbl:'Phase 3 — Implementation Sprint',     w1:9,  w2:14, bg:'#0f2d1e' },
+  { lbl:'Phase 4 — Audit & Pre-Launch',        w1:15, w2:20, bg:'#2a1500' },
+];
+
+const PROJECTS = [
+  {
+    id:'astron', nm:'Astron Chain',
+    rows:[
+      { lbl:'Legal & Templates', tasks:[
+        { id:'a1',  lbl:'MOU/LOI Template',       s:1,  e:1,  gate:1, who:'Chen',
+          det:'Chen finalizes MOU/LOI template — this is a hard gate blocking ALL downstream BD activity. No project can formally advance to MOU stage until this is complete.' },
+        { id:'a2',  lbl:'BD Spreadsheet Live',    s:1,  e:1,  gate:1, who:'Charlie, Chrissy, Siu Chiu',
+          det:'BD spreadsheet goes live with pipeline owners assigned: Charlie (primary), Chrissy, and Siu Chiu. Enables structured tracking of all outreach activity.' },
+        { id:'a3',  lbl:'MOU Review Queue',       s:3,  e:7,  who:'Chen',
+          det:'Ongoing MOU review process as the pipeline advances. At least 1 warm project should be in Chen\'s queue by Week 3. First MOU target: signed by Week 4.',
+          cf:1, cfn:'⚠️ Chen peak load: Astron MOU reviews + Gold RWA legal classification run concurrently in Weeks 3–4.' },
+        { id:'a4',  lbl:'Campaign Assessment',    s:8,  e:8,  gate:1, who:'All',
+          det:'Count MOUs signed, assess conversion rate, make go/no-go on continued BD. This gate triggers transition to maintenance mode.' },
+        { id:'a5',  lbl:'Ecosystem Health Report',s:19, e:20, who:'Team',
+          det:'Full ecosystem health report for Jackson: campaign results, MOU outcomes, partner status, and learnings for a potential Wave 2 BD push.' },
+      ]},
+      { lbl:'BD Outreach', tasks:[
+        { id:'a6',  lbl:'Warm Project Outreach',  s:1,  e:2,  who:'BD Team',
+          det:'Begin outreach on 3 warm projects. Target: 20+ touches by Week 2, 40+ by Week 3. Focus on quality conversations over raw volume.' },
+        { id:'a7',  lbl:'Cold Outreach List',     s:2,  e:3,  who:'Chrissy, Siu Chiu',
+          det:'Build cold outreach list from rwa.xyz and DeFi Llama. Charlie re-qualifies 30+ existing leads in parallel during Week 2.' },
+        { id:'a8',  lbl:'First MOU Signed',       s:4,  e:4,  gate:1, ms:1, who:'BD Team',
+          det:'First MOU signed — campaign milestone! 50+ cumulative outreach touches. 8–12 active conversations in pipeline. This gate validates the BD process.' },
+        { id:'a9',  lbl:'MOU Conversion Push',    s:5,  e:7,  who:'BD Team',
+          det:'Shift focus from outreach volume to MOU conversion. Target: 3–5 MOUs signed or in final review by Week 7. Quality over quantity now.' },
+        { id:'a10', lbl:'MOU Sprint + PR',        s:7,  e:8,  who:'BD Team',
+          det:'MOU signing sprint runs alongside PR release. Total target: 5–8 MOUs. Campaign assessment follows at Week 8.' },
+        { id:'a11', lbl:'Maintenance Mode',       s:9,  e:20, who:'Team', sub:1,
+          det:'Maintenance mode only — close remaining pipeline. Monthly check-ins. Consider Wave 2 BD if original targets are clearly exceeded (Weeks 15–18).' },
+      ]},
+      { lbl:'Marketing / PR', tasks:[
+        { id:'a12', lbl:'Brief Agency',           s:1,  e:1,  who:'Marketing',
+          det:'Brief marketing agency on full scope: 2 articles + 1 PR release. Align on Astron Chain narrative, target audience, and publication timeline.' },
+        { id:'a13', lbl:'Article 1 Draft',        s:4,  e:5,  who:'Agency',
+          det:'Agency drafts Article 1. Draft delivered end of Week 5 for review before Week 6 publication.' },
+        { id:'a14', lbl:'Article 1 Published',    s:6,  e:6,  gate:1, ms:1, who:'Agency',
+          det:'Article 1 published — triggers maximum social media push. Signals the PR release and Article 2 commissioning.' },
+        { id:'a15', lbl:'PR Release',             s:7,  e:7,  ms:1, who:'Agency',
+          det:'PR release published. Maximum coordinated social media push. Aligned with MOU signing sprint for peak visibility.' },
+        { id:'a16', lbl:'Article 2',              s:7,  e:8,  ms:1, who:'Agency',
+          det:'Article 2 begun Week 7, published by Week 8. Final content piece of the initial campaign.' },
+      ]},
+    ]
+  },
+  {
+    id:'autox', nm:'AutoX',
+    rows:[
+      { lbl:'Account Abstraction (AA)', tasks:[
+        { id:'x1', lbl:'Confirm Eng. Allocation', s:1,  e:1,  gate:1, who:'Joe',
+          det:'Confirm engineering allocation with Joe — this gates ALL technical work. Without Joe\'s confirmed bandwidth, no development can begin on any AutoX track.' },
+        { id:'x2', lbl:'Tech Stack Audit',        s:1,  e:2,  who:'Joe, Eric',
+          det:'Categorize all modernization debt. Results directly inform the AA, Gas Sponsorship, and MPC implementation roadmap and sequencing.' },
+        { id:'x3', lbl:'AA Implementation',       s:1,  e:4,  who:'Joe, Eric',
+          det:'Joe + Eric implement Account Abstraction (ERC-4337). Joe provides realistic timeline for AA + Gas + MPC by end of Week 2.' },
+        { id:'x4', lbl:'AA Complete',             s:5,  e:6,  gate:1, ms:1, who:'Joe',
+          det:'Account Abstraction targeting completion. Joe confirms AA + Gas Sponsorship are ready for Gold RWA testnet integration by Week 10.' },
+        { id:'x5', lbl:'AA Docs → DD Pack',       s:7,  e:10, who:'Joe',
+          det:'Comprehensive documentation of the AA implementation for the Gold RWA due diligence pack. Thorough technical writeup required.' },
+      ]},
+      { lbl:'Gas / MPC / DID', tasks:[
+        { id:'x6',  lbl:'DID Research',           s:2,  e:3,  who:'Joe',
+          det:'Evaluate Polygon ID, Dock, and Civic for DID integration. Research ecosystem compatibility, maturity, and implementation complexity. Recommendation: Polygon ID.' },
+        { id:'x7',  lbl:'DID Target Selected',    s:3,  e:3,  gate:1, ms:1, who:'Joe',
+          det:'Select DID integration target — Polygon ID is strongly recommended based on ecosystem fit, documentation quality, and technical maturity.' },
+        { id:'x8',  lbl:'Gas Sponsorship',        s:4,  e:6,  who:'Joe, Eric',
+          det:'Paymaster / Gas Sponsorship (ERC-4337 Paymaster) implementation. Begins Week 4, nearing completion by Week 6. Joe confirms readiness.' },
+        { id:'x9',  lbl:'MPC Wallet',             s:5,  e:8,  who:'Joe, Eric',
+          det:'MPC Wallet implementation begins Week 5. All three features (AA + Gas + MPC) must be complete and testable by end of Week 8.' },
+        { id:'x10', lbl:'AA+Gas+MPC Complete',    s:8,  e:8,  gate:1, ms:1, who:'Joe',
+          det:'All three core components — Account Abstraction, Gas Sponsorship, MPC Wallet — complete and testable. Audit documentation prep begins immediately.' },
+        { id:'x11', lbl:'DID Integration',        s:9,  e:14, who:'Joe, Eric',
+          det:'Full Polygon ID DID integration runs Weeks 9–14. Social Recovery implementation begins Week 12 in parallel.' },
+        { id:'x12', lbl:'Social Recovery',        s:12, e:17, who:'Joe, Eric',
+          det:'Social recovery module implementation. Begins Week 12, must complete before testnet feature freeze at Week 15.' },
+      ]},
+      { lbl:'Tokenomics & Audit', tasks:[
+        { id:'x13', lbl:'Tokenomics Design',      s:9,  e:10, gate:1, who:'Joe',
+          det:'Tokenomics design document finalized by end of Week 10. Required input for Gold RWA investor materials and proposals.' },
+        { id:'x14', lbl:'Testnet Feature Freeze', s:15, e:15, ms:1, who:'Joe',
+          det:'Social recovery complete. Testnet feature freeze — code is locked. No new features permitted after this point, pre-audit.' },
+        { id:'x15', lbl:'Engage Audit Firm',      s:15, e:15, gate:1, ms:1, who:'Joe',
+          det:'Engage audit firm by Week 15. Target: preliminary findings with zero critical vulnerabilities by Week 20. This is a hard gate for mainnet readiness.' },
+        { id:'x16', lbl:'Audit In Progress',      s:16, e:20, who:'Joe',
+          det:'Audit in progress — Joe addresses findings real-time as they\'re identified. Zero critical vulnerabilities is the non-negotiable target.' },
+        { id:'x17', lbl:'No Critical Vulns',      s:20, e:20, gate:1, ms:1, who:'Joe',
+          det:'Audit preliminary findings target: zero critical vulnerabilities by Week 20. This gate determines mainnet readiness and launch timing.' },
+      ]},
+    ]
+  },
+  {
+    id:'goldrwa', nm:'Gold RWA',
+    rows:[
+      { lbl:'Legal & Compliance', tasks:[
+        { id:'g1', lbl:'SFC License Confirm',       s:1,  e:1,  who:'Team',
+          det:'Confirm parent company SFC license types — this determines which regulatory pathway is structurally viable for the product.' },
+        { id:'g2', lbl:'China Exposure Assessment', s:1,  e:2,  gate:1, who:'Team',
+          det:'Assess gold mine partner\'s China exposure — gates the partnership decision. High exposure may structurally block the regulated HK pathway entirely.' },
+        { id:'g3', lbl:'Legal Classification',      s:2,  e:4,  gate:1, who:'Chen',
+          det:'Preliminary legal classification analysis begins Week 2. Full opinion delivered Week 4. This is critical input for finalizing both proposals.',
+          cf:1, cfn:'⚠️ Chen peak load: Astron MOU reviews + Gold RWA legal classification both running in Week 4. Prioritize accordingly.' },
+        { id:'g4', lbl:'SFC Pre-Consultation',      s:8,  e:13, who:'Chen',
+          det:'Chen drafts SFC pre-consultation document (if regulated path chosen). Pre-consultation meeting with SFC targets Weeks 12–13.' },
+        { id:'g5', lbl:'Compliance + KYC/AML',      s:19, e:20, who:'Chen',
+          det:'Compliance infrastructure + full KYC/AML flow finalized. Required before any mainnet launch. Incorporates all SFC feedback from pre-consultation.' },
+      ]},
+      { lbl:'Proposals & Investor BD', tasks:[
+        { id:'g6',  lbl:'HFT Strategy Outline',     s:1,  e:2,  who:'Anthony',
+          det:'Anthony outlines HFT/arbitrage strategy (Week 1), delivers full written outline by Week 2. Completes HFT section for DD pack by Week 4.' },
+        { id:'g7',  lbl:'Dual-Proposal Draft',       s:2,  e:5,  who:'Team',
+          det:'Draft Option A (Regulated HK per SFO) + Option B (Unregulated Offshore). Both at 70%+ by Week 5. Henry reviews risk disclosure sections.' },
+        { id:'g8',  lbl:'Both Proposals Complete',   s:6,  e:6,  gate:1, ms:1, who:'Team',
+          det:'Both proposals complete and circulated for internal review. DD pack at 60%+. Gold mine partner conversations: 2–3 substantive meetings done.' },
+        { id:'g9',  lbl:'THE BIG DECISION',          s:7,  e:7,  gate:1, ms:1, imp:1, who:'Jackson',
+          det:'🚨 CRITICAL: Present both proposals to Jackson — Regulated vs. Unregulated path DECISION. Hard deadline Week 7 (absolute flex to Week 8, no later). This single decision gates ALL downstream Gold RWA work across legal, technical, and BD tracks.' },
+        { id:'g10', lbl:'Execute Chosen Path',       s:8,  e:10, who:'Team',
+          det:'Execute Jackson\'s decision. DD pack delivered to gold mine partner. Regulated: SFC pre-consultation drafted. Unregulated: offshore structuring begins immediately.' },
+        { id:'g11', lbl:'Investor Outreach',         s:9,  e:18, who:'Team',
+          det:'3–5 institutional investor targets initially. 10+ conversations by Week 15. 3–5 in active DD. Target: at least 1 soft commitment by Week 18.' },
+        { id:'g12', lbl:'Investor Soft Commitment',  s:18, e:18, gate:1, ms:1, who:'Team',
+          det:'At least 1 investor soft commitment secured by Week 18. This milestone validates the investment thesis and directly propels mainnet preparation.' },
+        { id:'g13', lbl:'Mainnet Deployment Prep',   s:19, e:20, who:'Team',
+          det:'Mainnet deployment preparation: final gold custody verification, oracle go-live testing, KYC/AML flow validated end-to-end.' },
+      ]},
+      { lbl:'Partner & Technical', tasks:[
+        { id:'g14', lbl:'Gold Mine Partner Talks',   s:3,  e:8,  who:'Team',
+          det:'Substantive conversations with gold mine partner: 2–3 by Week 6. Full DD pack delivered Week 8. Target: MOU/LOI signed by end of Week 10.' },
+        { id:'g15', lbl:'Partner MOU/LOI Signed',    s:9,  e:10, gate:1, ms:1, who:'Team',
+          det:'Gold mine partner signs MOU/LOI by end of Week 10 — critical gate for full technical integration planning and custody architecture finalization.' },
+        { id:'g16', lbl:'Oracle + Custody Design',   s:5,  e:10, who:'Tech Team',
+          det:'Full tokenomics, custody/oracle architecture, and on/off ramp design and documentation. Feeds both proposals, DD pack, and testnet build.' },
+        { id:'g17', lbl:'Testnet Integration',       s:11, e:14, who:'Tech Team',
+          det:'Custody, oracle, and on/off ramp integration on AutoX testnet. Anthony tests HFT strategy via paper trading in parallel.' },
+        { id:'g18', lbl:'Token on AutoX Testnet',    s:12, e:12, gate:1, ms:1, who:'Joe, Tech',
+          det:'Gold RWA token deployed on AutoX testnet (Week 12). Requires AA + Gas Sponsorship to be fully functional on the AutoX chain.' },
+        { id:'g19', lbl:'E2E Testnet Demo',          s:14, e:14, gate:1, ms:1, who:'Team',
+          det:'End-to-end testnet demo working (Week 14): mint → custody → oracle pricing → HFT → redemption. Full flow must be demonstrable.' },
+      ]},
+    ]
+  },
+  {
+    id:'aienhancer', nm:'AI Enhancer',
+    rows:[
+      { lbl:'BD Tools', tasks:[
+        { id:'ai1', lbl:'Deploy Freelance AI Devs',  s:1,  e:1,  gate:1, who:'AI Devs (×2)',
+          det:'Deploy 2 freelance AI devs on BD outreach tooling. Gate: must be onboarded immediately to meet the Week 2 deliverable. No delay tolerated.' },
+        { id:'ai2', lbl:'Outbound Email/LinkedIn',   s:1,  e:2,  who:'AI Devs',
+          det:'Working outbound email/LinkedIn generator. Hard deliverable: live and in active use by end of Week 2. Directly feeds the Astron Chain BD campaign.' },
+        { id:'ai3', lbl:'BD Tool Live',              s:3,  e:3,  ms:1, who:'AI Devs',
+          det:'BD outreach tool fully deployed and used daily by BD team from Week 3 onwards. Social media content auto-generation pipeline also begins this week.' },
+        { id:'ai4', lbl:'Inbound Triage System',     s:4,  e:6,  who:'AI Devs',
+          det:'Scope (Week 4) → Develop (Week 5) → Deploy live (Week 6). Automatically handles and intelligently routes all incoming project inquiries.' },
+        { id:'ai5', lbl:'AutoX Agent Toolkit',       s:7,  e:14, who:'AI Devs',
+          det:'LLM.txt + CLI agent toolkit for AutoX. Scoping and architecture begins Week 7. MVP delivered and in active internal testing by Week 14.' },
+        { id:'ai6', lbl:'Agent Toolkit Public',      s:15, e:20, ms:1, who:'AI Devs',
+          det:'All tools reach steady-state. Iterate agent toolkit on feedback. Explore external developer onboarding tools. Ready for public testing by Week 20.' },
+      ]},
+      { lbl:'Automation & Tracking', tasks:[
+        { id:'ai7',  lbl:'Social Media Pipeline',   s:2,  e:5,  who:'AI Devs',
+          det:'Social media content auto-generation pipeline. Produces 3–5 polished, on-brand social drafts per week for Eason to review and publish.' },
+        { id:'ai8',  lbl:'Pipeline Dashboard',      s:3,  e:4,  gate:1, ms:1, who:'AI Devs',
+          det:'Pipeline conversion dashboard live by Week 4. Weekly automated reports begin. Tracks BD outreach touches → MOU conversion rates in real time.' },
+        { id:'ai9',  lbl:'Efficiency Tracking',     s:6,  e:8,  who:'AI Devs',
+          det:'Track and compile all measurable AI tool efficiency gains. Package into a clear data report for Jackson demonstrating ROI.' },
+        { id:'ai10', lbl:'RWA Compliance Tracker',  s:8,  e:10, who:'AI Devs',
+          det:'RWA compliance tracker tool (activated if regulated path chosen). Tracks SFC requirements, filing deadlines, and compliance obligations. Live by Week 10.' },
+        { id:'ai11', lbl:'Agent Toolkit MVP Testing',s:11, e:14, who:'AI Devs',
+          det:'Agent toolkit MVP in active internal testing. Refined based on team feedback and edge cases before any external release.' },
+      ]},
+    ]
+  },
+];
+
+const CONFLICTS = [
+  { week:1, person:'Chen', note:'MOU/LOI Template + Gold RWA legal research — same week' },
+  { week:3, person:'Denton', note:'Shift from 50% Astron → 50% Gold RWA starts this week' },
+  { week:4, person:'Chen', note:'Peak load — Astron MOU reviews + Gold RWA classification' },
+  { week:8, person:'Chrissy & Siu Chiu', note:'Winding down Astron while ramping Gold RWA' },
+];
+
+// ════════════════════════════════════════════════════════
+// LANE ASSIGNMENT
+// ════════════════════════════════════════════════════════
+
+function assignLanes(tasks) {
+  const ends = [];
+  tasks.forEach(t => {
+    let lane = 0;
+    while (ends[lane] !== undefined && ends[lane] >= t.s) lane++;
+    ends[lane] = t.e;
+    t._lane = lane;
+  });
+  return ends.length;
+}
+
+// Build task map & pre-compute row heights
+const TM = {};
+PROJECTS.forEach(p => {
+  p.rows.forEach(r => {
+    r._nl = assignLanes(r.tasks);
+    r._h  = Math.max(r._nl * LANE_H + ROW_PAD * 2, 46);
+    r.tasks.forEach(t => {
+      t._pid = p.id;
+      t._rl  = r.lbl;
+      TM[t.id] = t;
+    });
+  });
+});
+
+// ════════════════════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════════════════════
+
+let AF = 'all';
+function fps() { return AF === 'all' ? PROJECTS : PROJECTS.filter(p => p.id === AF); }
+
+function render() {
+  buildLeft(fps());
+  buildRight(fps());
+  buildStats();
+}
+
+// ── LEFT PANEL ───────────────────────────────────────────
+
+function buildLeft(projs) {
+  const el = document.getElementById('tlLeft');
+  el.style.width = LW + 'px';
+  let h = '';
+
+  h += `<div class="lp-corner" style="height:${HDR_H}px;">
+    <span class="lp-corner-txt">Workstream ↕ &nbsp;·&nbsp; Week →</span>
+  </div>`;
+
+  projs.forEach(p => {
+    const c = PC[p.id];
+    h += `<div class="lp-proj" style="height:${PROJ_H}px;background:${c.hd};color:#fff;font-size:11px;">
+      <span style="font-size:15px">${c.ic}</span>&nbsp;${p.nm}
+    </div>`;
+    p.rows.forEach(r => {
+      h += `<div class="lp-row" style="height:${r._h}px;border-left-color:${c.hd};">${r.lbl}</div>`;
+    });
+    if (p.id === 'astron' && AF === 'all') {
+      CONFLICTS.forEach(cf => {
+        h += `<div class="lp-cf" style="height:${CF_H}px;">⚠️ ${cf.person}</div>`;
+      });
+    }
+  });
+
+  el.innerHTML = h;
+}
+
+// ── RIGHT PANEL ──────────────────────────────────────────
+
+function buildRight(projs) {
+  const el = document.getElementById('tlRight');
+  const TotalW = WW * TW;
+  let h = '';
+
+  // Week Header
+  h += `<div class="rp-hdr" style="width:${TotalW}px;min-width:${TotalW}px;">`;
+  h += `<div class="rp-phases">`;
+  PHASES.forEach(ph => {
+    const w = (ph.w2 - ph.w1 + 1) * WW;
+    h += `<div class="ph-cell" style="width:${w}px;min-width:${w}px;background:${ph.bg};">${ph.lbl}</div>`;
+  });
+  h += `</div><div class="rp-weeks">`;
+  for (let w = 1; w <= TW; w++) {
+    h += `<div class="wk-col${w === CUR_WK ? ' curr' : ''}" style="width:${WW}px;min-width:${WW}px;">
+      <span class="wk-n">W${w}</span>
+    </div>`;
+  }
+  h += `</div></div>`;
+
+  // Body
+  h += `<div style="width:${TotalW}px;min-width:${TotalW}px;">`;
+
+  projs.forEach(p => {
+    const c = PC[p.id];
+
+    // Project header strip
+    h += `<div class="rp-proj-strip" style="height:${PROJ_H}px;width:${TotalW}px;background:${c.hd};opacity:0.1;border-bottom:2px solid ${c.hd};"></div>`;
+
+    // Task rows
+    p.rows.forEach(r => {
+      h += `<div class="rp-row" style="height:${r._h}px;width:${TotalW}px;background:${c.lt};--ww:${WW}px;">`;
+      h += `<div class="cw-col" style="left:${(CUR_WK-1)*WW}px;width:${WW}px;"></div>`;
+
+      r.tasks.forEach(t => {
+        const x  = (t.s - 1) * WW + 2;
+        const bw = (t.e - t.s + 1) * WW - 4;
+        const y  = ROW_PAD + t._lane * LANE_H;
+
+        let bg = c.bg, bd = c.bd, tx = c.tx;
+        if (t.imp) { bg = '#fee2e2'; bd = '#dc2626'; tx = '#991b1b'; }
+
+        const cls = ['tbar',
+          t.gate ? 'is-gate' : '',
+          t.ms   ? 'is-ms'   : '',
+          t.imp  ? 'is-imp'  : '',
+          t.sub  ? 'is-sub'  : '',
+        ].filter(Boolean).join(' ');
+
+        h += `<div class="${cls}" data-tid="${t.id}"
+          style="left:${x}px;top:${y}px;width:${bw}px;height:${BAR_H}px;
+                 background:${bg};border-color:${bd};color:${tx};
+                 ${t.imp ? 'font-weight:800;' : ''}">`;
+
+        if (t.gate) h += `<div class="gate-bar" style="${t.imp ? 'background:#dc2626;' : ''}"></div>`;
+
+        if (bw > 22) {
+          if (t.gate) h += `<span class="ti">${t.imp ? '🚨' : '🔒'}</span>`;
+          else if (t.ms) h += `<span class="ti" style="color:${c.hd}">◆</span>`;
+
+          if (bw > 42) {
+            h += `<span class="tl-lbl">${t.lbl.replace(/^🔒+\s*/g,'')}</span>`;
+          }
+          if (t.cf) h += `<span class="tc">⚠️</span>`;
+        }
+        h += `</div>`;
+      });
+      h += `</div>`;
+    });
+
+    // Conflict rows (after Astron in all-view)
+    if (p.id === 'astron' && AF === 'all') {
+      CONFLICTS.forEach(cf => {
+        const cfX = (cf.week - 1) * WW;
+        h += `<div class="rp-cf" style="height:${CF_H}px;width:${TotalW}px;--ww:${WW}px;">`;
+        h += `<div class="cw-col" style="left:${(CUR_WK-1)*WW}px;width:${WW}px;"></div>`;
+        h += `<div class="cf-strip" style="left:${cfX}px;width:${WW}px;"></div>`;
+        if (cfX + WW + 8 < TotalW) {
+          h += `<span class="cf-note" style="left:${cfX + WW + 8}px;">${cf.note}</span>`;
+        }
+        h += `</div>`;
+      });
+    }
+  });
+
+  h += `</div>`;
+  el.innerHTML = h;
+  attachEvts();
+}
+
+// ════════════════════════════════════════════════════════
+// INTERACTIONS
+// ════════════════════════════════════════════════════════
+
+const $tt = document.getElementById('tooltip');
+
+function attachEvts() {
+  document.querySelectorAll('.tbar').forEach(el => {
+    const t = TM[el.dataset.tid];
+    if (!t) return;
+    el.addEventListener('mouseenter', e => showTT(e, t));
+    el.addEventListener('mousemove',  e => moveTT(e));
+    el.addEventListener('mouseleave', hideTT);
+    el.addEventListener('click',      () => openModal(t));
+  });
+}
+
+function showTT(e, t) {
+  const wr = t.s === t.e ? `Week ${t.s}` : `Weeks ${t.s}–${t.e}`;
+  const dur = t.e - t.s + 1;
+  $tt.innerHTML = `
+    <div class="tt-h">${t.lbl.replace(/^🔒+\s*/g,'')}</div>
+    <div><span class="tt-w">${wr}</span> &nbsp;<span style="font-size:10px;color:#475569">${dur} week${dur>1?'s':''}</span></div>
+    ${t.who ? `<div class="tt-m">👤 ${t.who}</div>` : ''}
+    ${t.det ? `<div class="tt-d">${t.det.slice(0,145)}${t.det.length>145?'…':''}</div>` : ''}
+    ${t.gate ? `<div class="tt-gate">🔒 Gate — blocks downstream work</div>` : ''}
+    ${t.cf   ? `<div class="tt-cf">⚠️ Resource conflict flagged</div>` : ''}
+  `;
+  moveTT(e);
+  $tt.classList.add('show');
+}
+
+function moveTT(e) {
+  const tw = 300, th = $tt.offsetHeight || 100;
+  let x = e.clientX + 14, y = e.clientY - 10;
+  if (x + tw > window.innerWidth - 8)  x = e.clientX - tw - 14;
+  if (y + th > window.innerHeight - 8) y = window.innerHeight - th - 8;
+  if (y < 8) y = 8;
+  $tt.style.left = x + 'px';
+  $tt.style.top  = y + 'px';
+}
+function hideTT() { $tt.classList.remove('show'); }
+
+// ── MODAL ─────────────────────────────────────────────────
+
+function openModal(t) {
+  hideTT();
+  const c = PC[t._pid];
+  const p = PROJECTS.find(p => p.id === t._pid);
+  const wr  = t.s === t.e ? `Week ${t.s}` : `Weeks ${t.s}–${t.e}`;
+  const dur = t.e - t.s + 1;
+
+  document.getElementById('mTop').style.background   = t.imp ? '#dc2626' : c.hd;
+  document.getElementById('mTitle').textContent = t.lbl.replace(/^🔒+\s*/g,'');
+
+  let b = `
+    <div class="m-badges">
+      <span class="badge b-proj" style="background:${c.hd}">${c.ic} ${p.nm}</span>
+      ${t.gate ? '<span class="badge b-gate">🔒 Gate</span>' : ''}
+      ${t.ms   ? '<span class="badge b-ms">◆ Milestone</span>' : ''}
+      ${t.imp  ? '<span class="badge b-imp">🚨 Critical Decision</span>' : ''}
+      ${t.cf   ? '<span class="badge b-cf">⚠️ Resource Conflict</span>' : ''}
+    </div>
+    <div class="m-meta">
+      <span class="wpill">${wr}</span>
+      <span style="font-size:11px;color:#94a3b8">·</span>
+      <span style="font-size:11px;color:#64748b">${dur} week${dur>1?'s':''}</span>
+      <span style="font-size:11px;color:#94a3b8">·</span>
+      <span style="font-size:11px;color:#64748b">${t._rl}</span>
+    </div>
+    ${t.who ? `<div class="m-meta"><span class="apill">👤 ${t.who}</span></div>` : ''}
+    <div class="m-section-title">Task Details</div>
+    <div class="m-desc" style="border-left-color:${t.imp ? '#dc2626' : c.hd}">${t.det || 'No additional details.'}</div>
+  `;
+
+  if (t.gate) {
+    b += `<div class="m-warn w-gate">
+      <span style="font-size:18px;flex-shrink:0">${t.imp ? '🚨' : '🔒'}</span>
+      <div><strong>${t.imp ? 'Critical Decision Gate:' : 'Gate:'}</strong> All downstream tasks are blocked until this is resolved. Delays here will cascade through the entire timeline.</div>
+    </div>`;
+  }
+  if (t.cfn) {
+    b += `<div class="m-warn w-cf" style="margin-top:8px">
+      <span style="font-size:18px;flex-shrink:0">⚠️</span>
+      <div><strong>Resource Conflict:</strong> ${t.cfn}</div>
+    </div>`;
+  }
+
+  document.getElementById('mBody').innerHTML = b;
+  document.getElementById('modalBg').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
+
+document.getElementById('mClose').addEventListener('click', closeModal);
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target.id === 'modalBg') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── FILTERS ───────────────────────────────────────────────
+
+document.querySelectorAll('.fbtn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    AF = this.dataset.fid;
+    const sr = document.getElementById('tlRight').scrollLeft;
+    render();
+    document.getElementById('tlRight').scrollLeft = sr;
+  });
+});
+
+// ── ZOOM ──────────────────────────────────────────────────
+
+function applyZoom() {
+  const right = document.getElementById('tlRight');
+  const frac  = right.scrollWidth > 0 ? right.scrollLeft / right.scrollWidth : 0;
+  WW = WWS[wIdx];
+  document.getElementById('zlbl').textContent = Math.round(WW / 110 * 100) + '%';
+  document.getElementById('zIn').disabled  = wIdx >= WWS.length - 1;
+  document.getElementById('zOut').disabled = wIdx <= 0;
+  render();
+  requestAnimationFrame(() => { right.scrollLeft = frac * right.scrollWidth; });
+}
+
+document.getElementById('zIn').addEventListener('click', () => { if (wIdx < WWS.length-1) { wIdx++; applyZoom(); } });
+document.getElementById('zOut').addEventListener('click', () => { if (wIdx > 0) { wIdx--; applyZoom(); } });
+
+// ── SCROLL SYNC ───────────────────────────────────────────
+
+let syncing = false;
+const $tll  = document.getElementById('tlLeft');
+const $tlr  = document.getElementById('tlRight');
+
+$tll.addEventListener('scroll', () => {
+  if (syncing) return;
+  syncing = true;
+  $tlr.scrollTop = $tll.scrollTop;
+  syncing = false;
+});
+$tlr.addEventListener('scroll', () => {
+  if (syncing) return;
+  syncing = true;
+  $tll.scrollTop = $tlr.scrollTop;
+  syncing = false;
+});
+
+// ── STATS ─────────────────────────────────────────────────
+
+function buildStats() {
+  let tasks=0, gates=0, ms=0, cfs=0;
+  PROJECTS.forEach(p => p.rows.forEach(r => r.tasks.forEach(t => {
+    tasks++;
+    if (t.gate) gates++;
+    if (t.ms)   ms++;
+    if (t.cf)   cfs++;
+  })));
+
+  const fp = fps();
+  const fpTasks = fp.reduce((n,p) => n + p.rows.reduce((m,r) => m + r.tasks.length, 0), 0);
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="si"><span class="sv">${fpTasks}</span> tasks shown</div>
+    <div class="si"><span class="sv" style="color:#ef4444">${gates}</span> total gates</div>
+    <div class="si"><span class="sv" style="color:#f59e0b">${ms}</span> milestones</div>
+    <div class="si"><span class="sv" style="color:#f97316">${cfs}</span> resource conflicts</div>
+    <div class="si"><span class="sv">4</span> workstreams &nbsp;·&nbsp; <span class="sv">20</span> weeks</div>
+    <div class="hint">💡 Click any bar for full details &nbsp;·&nbsp; Scroll right to navigate weeks &nbsp;·&nbsp; Use − / + to zoom &nbsp;·&nbsp; <kbd style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:3px;padding:1px 5px;font-size:10px;">Esc</kbd> to close modal</div>
+  `;
+}
+
+// ── INIT ──────────────────────────────────────────────────
+render();
+</script>
+
+
+</body></html>
